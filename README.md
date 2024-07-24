@@ -52,3 +52,100 @@ https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html
 - 생성자를 통해 repository에 대한 내용을 주입
 - 이를 di (defendency injection)이라고 함
 - 직접적인 호출은 피하면서 간단히 사용할 수 있다는 장점
+
+### repository 메서드 작성 규칙
+
+##### 식별자로 엔티티 조회
+- findById()
+- T findById(ID id) -> 없으면 null 반환
+- Optional<T> findById(ID id) -> 없으면 empty Optional 반환
+```text
+Optional<User> findById(String email);
+```
+---
+
+##### 엔티티 삭제
+- delete
+- void delete(T entity)
+- void deleteById(ID id) -> 내부적으로 findById()로 엔티티를 조회한 뒤 delete()로 삭제
+- 삭제할 대상이 존재하지 않으면 exception 발생
+```text
+void delete(User user);
+
+userRepository.delete(user);
+```
+---
+
+##### 엔티티 저장
+- save
+- void save(T entity)
+- T save(T entity)
+```text
+// void save(User user);
+User save(User user);
+
+userRepository.save(user);
+```
+
+- save() 메서드 호출 시 select 쿼리 실행 후 insert 실행
+- 새 엔티티면 entitymanager의 persist() 실행, 아니면 merge() 실행
+- 여기서 merge로 인해 기존의 데이터가 있는지 확인하기 위해 select 쿼리를 실행
+---
+
+- 새 엔티티인지 판단하는 기준
+- persistable을 구현한 엔티티 -> isNew()로 판단
+- @Version 속성이 있는 경우 -> 버전 값이 null이면 새 엔티티로 판단
+- 식별자가 참조 타입인 경우 -> 식별자가 null이면 새 엔티티로 판단
+- 식별자가 참조 타입인 경우 -> 0이면 새 엔티티로 판단
+
+##### persistable 예시
+```text
+public class User implements Persistable<String>
+
+@Transient
+private boolean isNew = true;
+
+@Override
+public String getId() {
+    return email;
+}
+
+@Override
+public boolean isNew() {
+    return isNew;
+}
+
+@PostLoad
+@PrePersist
+void markNotNew() {
+   this.isNew = false;
+}
+```
+
+##### 특정 조건으로 찾기
+- findBy프로퍼티(값) -> property가 특정 값인 대상
+```text
+List<User> findByName(String name)
+List<Hotel> findByGradeAndName(Grade g, String name)
+```
+---
+
+- 조건 비교
+```text
+List<User> findByNameLike(String keyword)
+List<User> findByCreatedAtAfter(LocalDateTime time)
+List<Hotel> findByYearBetween(int from, int to)
+LessThan, IsNull, Containing, In, ...
+```
+- 자세한 건 '규칙에 맞게 메소드 추가' 부분에서 언급한 스프링 레퍼런스 문서 주소 참고
+---
+
+- 전부 조회
+```text
+repository.findAll();
+```
+---
+
+##### 주의
+- findBy 메서드를 남용하지 말 것
+- 검색 조건이 단순하지 않으면 @Query, SQL, 스펙 / QueryDSL 사용

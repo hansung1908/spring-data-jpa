@@ -1,20 +1,22 @@
 package com.hansung.spring_data_jpa.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import org.springframework.data.domain.Persistable;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user")
-public class User {
+public class User implements Persistable<String> {
     @Id
     private String email;
     private String name;
 
     @Column(name = "create_date")
     private LocalDateTime createDate;
+
+    @Transient
+    private boolean isNew = true;
 
     protected User() {
     }
@@ -39,5 +41,21 @@ public class User {
 
     public void changeName(String newName) {
         this.name = newName;
+    }
+
+    @Override
+    public String getId() {
+        return email;
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostLoad
+    @PrePersist
+    void markNotNew() {
+        this.isNew = false;
     }
 }
