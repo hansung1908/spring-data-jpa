@@ -97,8 +97,7 @@ userRepository.save(user);
 - @Version 속성이 있는 경우 -> 버전 값이 null이면 새 엔티티로 판단
 - 식별자가 참조 타입인 경우 -> 식별자가 null이면 새 엔티티로 판단
 - 식별자가 참조 타입인 경우 -> 0이면 새 엔티티로 판단
-
-##### persistable 예시
+- persistable 예시
 ```text
 public class User implements Persistable<String>
 
@@ -121,6 +120,7 @@ void markNotNew() {
    this.isNew = false;
 }
 ```
+---
 
 ##### 특정 조건으로 찾기
 - findBy프로퍼티(값) -> property가 특정 값인 대상
@@ -149,3 +149,78 @@ repository.findAll();
 ##### 주의
 - findBy 메서드를 남용하지 말 것
 - 검색 조건이 단순하지 않으면 @Query, SQL, 스펙 / QueryDSL 사용
+
+### 정렬
+- find 메서드에 OrderBy
+- OrderBy 뒤에 프로퍼티명 + Asc / Desc
+- 여러 프로퍼티 지정 가능
+```text
+List<User> findByNameLikeOrderByNameDesc(String keyword);
+-> order by u.name desc
+
+List<User> findByNameLikeOrderByNameAscEmailDesc(String keyword);
+-> order by u,name asc, email desc
+```
+
+- sort 타입
+```text
+List<User> findByNameLike(String keyword, Sort sort);
+
+Sort sort1 = Sort.by(Sort.Order.asc("name"));
+List<User> users1 = userRepository.findByNameLike("이름%", sort1);
+-> order by u.name asc
+
+Sort sort2 = Sort.by(Sort.Order.asc("name"), Sort.Order.desc("email"));
+List<User> users2 = userRepository.findByNameLike("이름%", sort2);
+-> order by u.name asc, email desc
+```
+
+- 메서드 명으로 정령 지정할 순 있지만 가능하면 Sort 사용
+
+### 페이징
+- Pageable / PageRequest 사용
+```text
+List<User> findByNameLike(String keyword, Pageable pageable);
+
+Sort sort3 = Sort.by(Sort.Order.asc("name"), Sort.Order.desc("email"));
+
+// page는 0부터 시작
+// 한 페이지에 10개 기준으로 두 번째 페이지 조회  
+Pageable pageable = PageRequest.ofSize(10).withPage(1).withSort(sort3);
+List<User> users3 = userRepository.findByNameLike("이름%", pageable);
+```
+
+- 페이징 조회 결과 Page로 구하기
+- Page 타입
+- 페이징 처리에 필요한 값을 함께 제공 (예, 전체 페이지 개수, 전체 개수 등)
+- Pageable을 사용하는 메서드의 리턴 타입을 Page로 지정하면 됨
+```text
+Page<User> findByEmailLike(String keyword, Pageable pageable);
+
+Pageable pageable2 = PageRequest.ofSize(10).withPage(0).withSort(sort3);
+Page<User> page = userRepository.findByEmailLike("email%", pageable2);
+
+long totalElements = page.getTotalElements(); // 조건에 해당하는 전체 개수
+int totalPages = page.getTotalPages(); // 전체 페이지 개수
+List<User> content = page.getContent(); // 현재 페이지 결과 목록
+int size = page.getSize(); // 페이지 크기
+int pageNumber = page.getNumber();  // 현재 페이지
+int numberOfElements = page.getNumberOfElements(); // content의 개수
+```
+
+- Pageable / PageRequest로 페이징 처리 가능
+- findTop / findFirst / findTopN / findFirstN
+
+### @Query
+- 메서드 명명 규칙이 아닌 JPQL을 직적 사용
+- 메서드 이름이 간결해짐
+```text
+@Query("select u from User u where u.createDate > :since order by u.createDate desc")
+List<User> findRecentUsers(@Param("since") LocalDateTime since);
+
+@Query("select u from User u where u.createDate > :since")
+List<User> findRecentUsers(@Param("since") LocalDateTime since, Sort sort);
+
+@Query("select u from User u where u.createDate > :since")
+Page<User> findRecentUsers(@Param("since") LocalDateTime since, Pageable pageable);
+```
