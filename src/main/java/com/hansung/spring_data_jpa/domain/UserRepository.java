@@ -3,6 +3,7 @@ package com.hansung.spring_data_jpa.domain;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
@@ -42,5 +43,9 @@ public interface UserRepository extends Repository<User, String> {
 
     @Query("select u from User u where u.createDate > :since")
     Page<User> findRecentUsers(@Param("since") LocalDateTime since, Pageable pageable);
+
+    List<User> findAll(Specification<User> spec);
+
+    Page<User> findAll(Specification<User> spec, Pageable pageable);
 }
 

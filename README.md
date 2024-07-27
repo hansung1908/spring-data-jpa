@@ -224,3 +224,75 @@ List<User> findRecentUsers(@Param("since") LocalDateTime since, Sort sort);
 @Query("select u from User u where u.createDate > :since")
 Page<User> findRecentUsers(@Param("since") LocalDateTime since, Pageable pageable);
 ```
+
+### Specification
+- 검색 조건을 생성하는 인터페이스
+- 줄여서 스펙이라고 함
+- Criteria를 이용해서 검색 조건 생성
+```text
+@Nullable
+Predicate toPredicate(Root<T> root, @Nullable CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder);
+```
+
+- repository에서 Specification을 이용한 검색 지정
+```text
+List<User> findAll(Specification<User> spec);
+```
+
+- 구현 예시
+- UserNameSpecification 클래스 참조
+```text
+UserNameSpecification spec = new UserNameSpecification("이름");
+List<User> users = userRepository.findAll(spec);
+```
+
+- 람다로 간결하게 구현
+- Specification을 구현한 클래스를 매번 만들기 보단 람다식을 이용해서 스펙 생성
+- UserSpecs 클래스 참조
+```text
+UserNameSpecification spec = UserSpecs.nameLike("이름");
+List<User> users = userRepository.findAll(spec);
+```
+---
+
+##### 검색 조건 조합
+- Specification의 or / and 메소드를 이용해서 조합
+```text
+Specification<User> nameSpec = UserSpecs.nameLike("이름1");
+Specification<User> afterSpec = UserSpecs.createdAfter(LocalDateTime.now().minusHours(1));
+Specification<User> compositespec = nameSpec.and(afterSpec);
+List<User> users2 = userRepository.findAll(compositespec);
+
+Specification<User> spec3 = UserSpecs.nameLike("이름2")
+                .and(UserSpecs.createdAfter(LocalDateTime.now().minusHours(1)));
+List<User> users3 = userRepository.findAll(spec3);
+```
+
+- 선택적으로 조합
+```text
+Specification<User> spec = Specification.where(null);
+
+if (keyword != null && !keyword.trim().isEmpty()) {
+    spec = spec.and(UserSpecs.nameLike(keyword));
+}
+if (dateTime != null) {
+    spec = spec.and(UserSpecs.createdAfter(dateTime));
+}
+
+List<User> users = userRepository.findAll(spec);
+```
+
+- SpecBuilder
+- if절을 덜 쓰기 위해 SpecBuilder 구현
+```text
+Specification<User> specs = SpecBuilder.builder(User.class)
+                .ifHasText(keyword, str -> UserSpecs.nameLike(str))
+                .ifNotNull(dt, value -> UserSpecs.createdAfter(value))
+                .toSpec();
+```
+
+- Specification + 정렬, 페이징
+```text
+List<User> findAll(Specification<User> spec, Sort s);
+Page<User> findAll(Specification<User> spec, Pageable pageable);
+```
