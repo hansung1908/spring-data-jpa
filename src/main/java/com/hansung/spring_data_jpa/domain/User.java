@@ -58,4 +58,13 @@ public class User implements Persistable<String> {
     void markNotNew() {
         this.isNew = false;
     }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "email='" + email + '\'' +
+                ", name='" + name + '\'' +
+                ", createDate=" + createDate +
+                '}';
+    }
 }

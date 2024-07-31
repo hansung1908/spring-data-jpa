@@ -47,5 +47,21 @@ public interface UserRepository extends Repository<User, String> {
     List<User> findAll(Specification<User> spec);
 
     Page<User> findAll(Specification<User> spec, Pageable pageable);
+
+    long countByNameLike(String keyword);
+
+    long count(Specification<User> spec);
+
+    @Query(
+            value = "select * from user u where u.create_date >= date_sub(now(), interval 1 day)",
+            nativeQuery = true)
+    List<User> findRecentUsers();
+
+    @Query(
+            value = "select max(create_date) from user",
+            nativeQuery = true)
+    LocalDateTime selectLastCreateDate();
+
+    Optional<User> findByName(String name);
 }
 
